@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle da Nave Espacial</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
+        
+        body {
+            font-family: 'VT323', monospace;
+            background-color: #000;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .background-gif {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -1;
+            filter: brightness(0.7);
+        }
+
+        .main-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .start-screen, .game-screen {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.5s ease-in-out;
+            z-index: 20;
+        }
+
+        .start-screen {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .start-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .game-screen {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .game-screen.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        h1 {
+            font-family: 'Bebas Neue', cursive;
+            font-size: 8rem;
+            text-shadow: 6px 6px 0px #fff;
+            color: #ff00ff;
+            letter-spacing: 0.1em;
+        }
+
+        h2 {
+            font-size: 2.5rem;
+            color: #00ff00;
+            margin-bottom: 2rem;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            width: 100%;
+            z-index: 10;
+        }
+        
+        button {
+            padding: 1rem 2rem;
+            font-size: 1.5rem;
+            font-weight: 600;
+            border-radius: 4px;
+            border: 2px solid #fff;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            text-shadow: 1px 1px 2px black;
+            box-shadow: 4px 4px 0px #fff;
+            image-rendering: pixelated;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 6px 6px 0px #fff;
+        }
+        
+        button:active {
+            transform: translateY(2px);
+            box-shadow: 2px 2px 0px #fff;
+        }
+
+        .start-btn {
+            border-color: #238636;
+            background-color: rgba(35, 134, 54, 0.7);
+            box-shadow: 4px 4px 0px #238636;
+        }
+
+        .start-btn:hover {
+            box-shadow: 6px 6px 0px #238636;
+        }
+
+        .shoot-btn {
+            border-color: #388bfd;
+            background-color: rgba(56, 139, 253, 0.7);
+            box-shadow: 4px 4px 0px #388bfd;
+        }
+
+        .shoot-btn:hover {
+            box-shadow: 6px 6px 0px #388bfd;
+        }
+        
+        .ship-container {
+            position: absolute;
+            left: 50%;
+            bottom: 20vh;
+            transform: translateX(-50%);
+            width: 128px;
+            height: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 5;
+            transition: left 0.2s ease-out;
+        }
+
+        .ship {
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+        }
+        
+        .status-display {
+            position: absolute;
+            top: 2rem;
+            left: 2rem;
+            font-size: 2rem;
+            color: #00ff00;
+            text-shadow: 0 0 5px #00ff00;
+            z-index: 20;
+        }
+        
+        .distance-counter {
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
+            font-size: 3rem;
+            font-weight: 700;
+            color: #00ffff;
+            text-shadow: 0 0 5px #00ffff;
+            z-index: 20;
+        }
+
+        .obstacle {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            z-index: 4;
+            transition: top linear;
+        }
+        
+        .obstacle img {
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+        }
+
+        .laser {
+            position: absolute;
+            width: 5px;
+            height: 20px;
+            background-color: #388bfd;
+            box-shadow: 0 0 10px #388bfd;
+            z-index: 6;
+            transition: bottom linear;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: rgba(0,0,0,0.9);
+            padding: 2rem;
+            border: 2px solid #fff;
+            width: 80%;
+            max-width: 500px;
+            text-align: center;
+            border-radius: 8px;
+            box-shadow: 8px 8px 0px #fff;
+            image-rendering: pixelated;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 1.5rem;
+        }
+
+    </style>
+</head>
+<body>
+    <img src="https://64.media.tumblr.com/90f6cdcbc51c53fa4ca7294da96fc3f8/tumblr_pios19KpQC1ufq8wko1_1280.gif" alt="Fundo Estrelado" class="background-gif" />
+    
+    <div class="main-container">
+        <!-- Tela Inicial -->
+        <div id="start-screen" class="start-screen active">
+            <h1>MISSAO ESPACIAL</h1>
+            <h2 id="high-score-display">Maior Distância: 0 m</h2>
+            <button id="start-btn" class="start-btn">Começar Missão</button>
+        </div>
+    
+        <!-- Tela do Jogo -->
+        <div id="game-screen" class="game-screen">
+            <div class="status-display" id="status-display">Pronto para a missão!</div>
+            <div class="distance-counter" id="distance-counter">0 m</div>
+            
+            <!-- Nave Espacial (Image) -->
+            <div class="ship-container" id="ship-container">
+                <img src="https://png.pngtree.com/png-vector/20240601/ourmid/pngtree-a-rocket-in-pixel-art-style-png-image_12588045.png" alt="Nave Espacial" class="ship" />
+            </div>
+            
+            <div class="controls">
+                <button id="shoot-btn" class="shoot-btn">Atirar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Fim de Jogo -->
+    <div id="game-over-modal" class="modal">
+        <div class="modal-content">
+            <h2>Fim de Jogo!</h2>
+            <p id="final-score">Sua distância: 0 m</p>
+            <p id="high-score-message"></p>
+            <div class="modal-buttons">
+                <button id="restart-btn" class="start-btn">Tentar novamente</button>
+                <button id="home-btn" class="start-btn">Página inicial</button>
+            </div>
+        </div>
+    </div>
+    
+
+    <script>
+        // Seleciona os elementos HTML
+        const startScreen = document.getElementById('start-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const statusDisplay = document.getElementById('status-display');
+        const distanceCounter = document.getElementById('distance-counter');
+        const highscoreDisplay = document.getElementById('high-score-display');
+        const startBtn = document.getElementById('start-btn');
+        const shootBtn = document.getElementById('shoot-btn');
+        const shipContainer = document.getElementById('ship-container');
+        const gameOverModal = document.getElementById('game-over-modal');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const highscoreMessage = document.getElementById('high-score-message');
+        const restartBtn = document.getElementById('restart-btn');
+        const homeBtn = document.getElementById('home-btn');
+        
+        // Variáveis de estado
+        let gameActive = false;
+        let distance = 0;
+        let obstacleSpeed = 2;
+        let gameInterval;
+        let shipX = window.innerWidth / 2;
+        const shipWidth = 128;
+        const shipHeight = 128;
+        const obstacleImage = "https://static.vecteezy.com/system/resources/thumbnails/027/517/526/small_2x/pixel-art-alien-ufo-character-png.png";
+
+        // Carrega o placar ao iniciar a página
+        function loadHighScore() {
+            const savedScore = localStorage.getItem('highScore') || 0;
+            highscoreDisplay.textContent = `Maior Distância: ${savedScore} m`;
+        }
+
+        // Função para iniciar o jogo
+        function startGame() {
+            startScreen.classList.remove('active');
+            startScreen.classList.add('hidden');
+            gameScreen.classList.add('active');
+            gameOverModal.style.display = 'none';
+            shipX = window.innerWidth / 2 - (shipWidth / 2);
+            shipContainer.style.left = `${shipX}px`;
+
+            statusDisplay.textContent = 'Contagem regressiva... 3';
+            let count = 3;
+            const countdownInterval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    statusDisplay.textContent = `Contagem regressiva... ${count}`;
+                } else {
+                    clearInterval(countdownInterval);
+                    statusDisplay.textContent = 'Missão em andamento!';
+                    gameActive = true;
+                    distance = 0;
+                    obstacleSpeed = 2;
+                    document.querySelectorAll('.obstacle').forEach(o => o.remove());
+                    document.querySelectorAll('.laser').forEach(l => l.remove());
+                    gameInterval = setInterval(gameLoop, 20);
+                }
+            }, 1000);
+        }
+
+        // Loop principal do jogo
+        function gameLoop() {
+            if (!gameActive) return;
+
+            distance += 1;
+            distanceCounter.textContent = `${distance} m`;
+
+            // Mover obstáculos
+            document.querySelectorAll('.obstacle').forEach(obstacle => {
+                const currentTop = parseFloat(getComputedStyle(obstacle).top);
+                obstacle.style.top = `${currentTop + obstacleSpeed}px`;
+                
+                // Remover obstáculos que saíram da tela
+                if (currentTop > window.innerHeight) {
+                    obstacle.remove();
+                }
+            });
+
+            // Mover lasers
+            document.querySelectorAll('.laser').forEach(laser => {
+                const currentBottom = parseFloat(getComputedStyle(laser).bottom);
+                laser.style.bottom = `${currentBottom + 10}px`;
+
+                // Remover lasers que saíram da tela
+                if (currentBottom > window.innerHeight) {
+                    laser.remove();
+                }
+            });
+
+            // Gerar novos obstáculos
+            if (Math.random() < 0.02) {
+                createObstacle();
+            }
+
+            // Aumentar a dificuldade
+            if (distance % 500 === 0) {
+                obstacleSpeed += 0.5;
+            }
+
+            checkCollisions();
+        }
+
+        // Função para criar obstáculos
+        function createObstacle() {
+            const obstacle = document.createElement('div');
+            obstacle.classList.add('obstacle');
+            const obstacleImg = document.createElement('img');
+            obstacleImg.src = obstacleImage;
+            obstacle.appendChild(obstacleImg);
+            const randomX = Math.random() * (window.innerWidth - 80);
+            obstacle.style.left = `${randomX}px`;
+            obstacle.style.top = `-80px`;
+            document.body.appendChild(obstacle);
+        }
+
+        // Função para criar lasers
+        function createLaser() {
+            if (!gameActive) return;
+            const laser = document.createElement('div');
+            laser.classList.add('laser');
+            const shipRect = shipContainer.getBoundingClientRect();
+            laser.style.left = `${shipRect.left + (shipRect.width / 2) - 2.5}px`;
+            laser.style.bottom = `${window.innerHeight - shipRect.top}px`;
+            document.body.appendChild(laser);
+        }
+
+        // Função para checar colisões
+        function checkCollisions() {
+            const shipRect = shipContainer.getBoundingClientRect();
+            const obstacles = document.querySelectorAll('.obstacle');
+            const lasers = document.querySelectorAll('.laser');
+
+            obstacles.forEach(obstacle => {
+                const obstacleRect = obstacle.getBoundingClientRect();
+                
+                // Colisão da nave com o obstáculo
+                if (
+                    shipRect.left < obstacleRect.right &&
+                    shipRect.right > obstacleRect.left &&
+                    shipRect.top < obstacleRect.bottom &&
+                    shipRect.bottom > obstacleRect.top
+                ) {
+                    endGame();
+                }
+
+                // Colisão do laser com o obstáculo
+                lasers.forEach(laser => {
+                    const laserRect = laser.getBoundingClientRect();
+                    if (
+                        laserRect.left < obstacleRect.right &&
+                        laserRect.right > obstacleRect.left &&
+                        laserRect.top < obstacleRect.bottom &&
+                        laserRect.bottom > obstacleRect.top
+                    ) {
+                        obstacle.remove();
+                        laser.remove();
+                    }
+                });
+            });
+        }
+        
+        // Função para finalizar o jogo
+        function endGame() {
+            gameActive = false;
+            clearInterval(gameInterval);
+            
+            // Atualiza o placar
+            const currentHighScore = localStorage.getItem('highScore') || 0;
+            if (distance > currentHighScore) {
+                localStorage.setItem('highScore', distance);
+                highscoreMessage.textContent = 'Novo recorde!';
+            } else {
+                highscoreMessage.textContent = `A maior distância é de ${currentHighScore} m.`;
+            }
+
+            finalScoreDisplay.textContent = `Sua distância: ${distance} m`;
+            gameOverModal.style.display = 'flex';
+            loadHighScore();
+        }
+
+        // Adiciona os event listeners aos botões e ao teclado
+        startBtn.addEventListener('click', startGame);
+        shootBtn.addEventListener('click', createLaser);
+
+        restartBtn.addEventListener('click', () => {
+            startGame();
+        });
+
+        homeBtn.addEventListener('click', () => {
+            gameScreen.classList.remove('active');
+            startScreen.classList.remove('hidden');
+            startScreen.classList.add('active');
+            gameOverModal.style.display = 'none';
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (!gameActive) return;
+            const moveAmount = 25;
+
+            if (event.key === 'ArrowLeft') {
+                shipX -= moveAmount;
+            } else if (event.key === 'ArrowRight') {
+                shipX += moveAmount;
+            } else if (event.key === ' ') {
+                createLaser();
+            }
+
+            // Limita a posição da nave
+            if (shipX < 0) shipX = 0;
+            if (shipX > window.innerWidth - shipWidth) shipX = window.innerWidth - shipWidth;
+
+            shipContainer.style.left = `${shipX}px`;
+        });
+        
+        // Carrega o placar ao carregar a página
+        window.onload = loadHighScore;
+    </script>
+</body>
+</html>
